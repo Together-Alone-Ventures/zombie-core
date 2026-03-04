@@ -76,8 +76,7 @@ pub fn decode_pii_state<T: for<'de> Deserialize<'de>>(
     bytes: &[u8],
 ) -> Result<T, SerialisationError> {
     validate_cbor_bytes(bytes)?;
-    ciborium::from_reader(bytes)
-        .map_err(|e| SerialisationError::DecodingFailed(e.to_string()))
+    ciborium::from_reader(bytes).map_err(|e| SerialisationError::DecodingFailed(e.to_string()))
 }
 
 /// Validate that CBOR bytes contain no floats.
@@ -135,7 +134,10 @@ mod tests {
 
     #[test]
     fn round_trip_simple() {
-        let p = SimpleProfile { email: "test@example.com".into(), age: 30 };
+        let p = SimpleProfile {
+            email: "test@example.com".into(),
+            age: 30,
+        };
         let bytes = encode_pii_state(&p).unwrap();
         let decoded: SimpleProfile = decode_pii_state(&bytes).unwrap();
         assert_eq!(p, decoded);
@@ -172,7 +174,10 @@ mod tests {
         let val = ciborium::Value::Float(3.14);
         let mut buf = Vec::new();
         ciborium::into_writer(&val, &mut buf).unwrap();
-        assert!(matches!(validate_cbor_bytes(&buf), Err(SerialisationError::FloatDetected)));
+        assert!(matches!(
+            validate_cbor_bytes(&buf),
+            Err(SerialisationError::FloatDetected)
+        ));
     }
 
     #[test]
@@ -183,7 +188,10 @@ mod tests {
         ]);
         let mut buf = Vec::new();
         ciborium::into_writer(&val, &mut buf).unwrap();
-        assert!(matches!(validate_cbor_bytes(&buf), Err(SerialisationError::FloatDetected)));
+        assert!(matches!(
+            validate_cbor_bytes(&buf),
+            Err(SerialisationError::FloatDetected)
+        ));
     }
 
     #[test]
@@ -194,7 +202,10 @@ mod tests {
         )]);
         let mut buf = Vec::new();
         ciborium::into_writer(&val, &mut buf).unwrap();
-        assert!(matches!(validate_cbor_bytes(&buf), Err(SerialisationError::FloatDetected)));
+        assert!(matches!(
+            validate_cbor_bytes(&buf),
+            Err(SerialisationError::FloatDetected)
+        ));
     }
 
     #[test]
@@ -211,7 +222,10 @@ mod tests {
 
     #[test]
     fn struct_encodes_successfully() {
-        let p = SimpleProfile { email: "test@example.com".into(), age: 30 };
+        let p = SimpleProfile {
+            email: "test@example.com".into(),
+            age: 30,
+        };
         let bytes = encode_pii_state(&p).unwrap();
         assert!(!bytes.is_empty());
     }

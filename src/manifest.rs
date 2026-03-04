@@ -53,10 +53,26 @@ mod tests {
 
     fn sample_manifest() -> Vec<FieldDescriptor> {
         vec![
-            FieldDescriptor { field_name: "email".into(), field_type: "String".into(), field_order: 0 },
-            FieldDescriptor { field_name: "birthdate".into(), field_type: "Option<String>".into(), field_order: 1 },
-            FieldDescriptor { field_name: "gender".into(), field_type: "Option<String>".into(), field_order: 2 },
-            FieldDescriptor { field_name: "display_name".into(), field_type: "Option<String>".into(), field_order: 3 },
+            FieldDescriptor {
+                field_name: "email".into(),
+                field_type: "String".into(),
+                field_order: 0,
+            },
+            FieldDescriptor {
+                field_name: "birthdate".into(),
+                field_type: "Option<String>".into(),
+                field_order: 1,
+            },
+            FieldDescriptor {
+                field_name: "gender".into(),
+                field_type: "Option<String>".into(),
+                field_order: 2,
+            },
+            FieldDescriptor {
+                field_name: "display_name".into(),
+                field_type: "Option<String>".into(),
+                field_order: 3,
+            },
         ]
     }
 
@@ -71,8 +87,15 @@ mod tests {
     fn manifest_hash_changes_with_field_added() {
         let base = sample_manifest();
         let mut extended = base.clone();
-        extended.push(FieldDescriptor { field_name: "phone".into(), field_type: "Option<String>".into(), field_order: 4 });
-        assert_ne!(compute_manifest_hash(&base), compute_manifest_hash(&extended));
+        extended.push(FieldDescriptor {
+            field_name: "phone".into(),
+            field_type: "Option<String>".into(),
+            field_order: 4,
+        });
+        assert_ne!(
+            compute_manifest_hash(&base),
+            compute_manifest_hash(&extended)
+        );
     }
 
     #[test]
@@ -80,7 +103,10 @@ mod tests {
         let base = sample_manifest();
         let mut modified = base.clone();
         modified[0].field_type = "Option<String>".into();
-        assert_ne!(compute_manifest_hash(&base), compute_manifest_hash(&modified));
+        assert_ne!(
+            compute_manifest_hash(&base),
+            compute_manifest_hash(&modified)
+        );
     }
 
     #[test]
@@ -88,7 +114,10 @@ mod tests {
         let base = sample_manifest();
         let mut modified = base.clone();
         modified[0].field_name = "email_address".into();
-        assert_ne!(compute_manifest_hash(&base), compute_manifest_hash(&modified));
+        assert_ne!(
+            compute_manifest_hash(&base),
+            compute_manifest_hash(&modified)
+        );
     }
 
     #[test]

@@ -145,12 +145,17 @@ mod tests {
         let c = Principal::from_text("aaaaa-aa").unwrap();
         let r = DeletionReceipt {
             protocol_version: ProtocolVersion::V2.into(),
-            receipt_id: [1u8; 32], canister_id: c,
+            receipt_id: [1u8; 32],
+            canister_id: c,
             subnet_id: Principal::from_text("2vxsx-fae").unwrap(),
-            pre_state_hash: [2u8; 32], post_state_hash: [3u8; 32],
-            tombstone_hash: [4u8; 32], deletion_event_hash: [5u8; 32],
+            pre_state_hash: [2u8; 32],
+            post_state_hash: [3u8; 32],
+            tombstone_hash: [4u8; 32],
+            deletion_event_hash: [5u8; 32],
             certified_commitment: [6u8; 32],
-            module_hash: [8u8; 32], timestamp: 1_000_000, nonce: 1,
+            module_hash: [8u8; 32],
+            timestamp: 1_000_000,
+            nonce: 1,
             bls_certificate: None,
             trust_root_key: vec![],
         };
@@ -164,12 +169,17 @@ mod tests {
         let c = Principal::from_text("aaaaa-aa").unwrap();
         let r = DeletionReceipt {
             protocol_version: ProtocolVersion::V2.into(),
-            receipt_id: [1u8; 32], canister_id: c,
+            receipt_id: [1u8; 32],
+            canister_id: c,
             subnet_id: Principal::from_text("2vxsx-fae").unwrap(),
-            pre_state_hash: [2u8; 32], post_state_hash: [2u8; 32],
-            tombstone_hash: [4u8; 32], deletion_event_hash: [5u8; 32],
+            pre_state_hash: [2u8; 32],
+            post_state_hash: [2u8; 32],
+            tombstone_hash: [4u8; 32],
+            deletion_event_hash: [5u8; 32],
             certified_commitment: [6u8; 32],
-            module_hash: [8u8; 32], timestamp: 1_000_000, nonce: 1,
+            module_hash: [8u8; 32],
+            timestamp: 1_000_000,
+            nonce: 1,
             bls_certificate: None,
             trust_root_key: vec![],
         };

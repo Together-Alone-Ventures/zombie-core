@@ -157,8 +157,12 @@ mod tests {
     #[test]
     fn tombstone_seed_differs_from_all_tags() {
         let tags: &[DomainTag] = &[
-            TAG_TOMBSTONE_HASH, TAG_EVENT, TAG_CERTIFIED,
-            TAG_RECEIPT, TAG_SALT, TAG_MANIFEST,
+            TAG_TOMBSTONE_HASH,
+            TAG_EVENT,
+            TAG_CERTIFIED,
+            TAG_RECEIPT,
+            TAG_SALT,
+            TAG_MANIFEST,
         ];
         for tag in tags {
             assert_ne!(TOMBSTONE_SEED, tag.0);
@@ -244,13 +248,10 @@ mod tests {
         let module_hash = [3u8; 32];
         let nonce = 1u64.to_be_bytes();
 
-        let result = hash_with_tag(TAG_EVENT, &[
-            &pre_state,
-            &post_state,
-            &timestamp,
-            &module_hash,
-            &nonce,
-        ]);
+        let result = hash_with_tag(
+            TAG_EVENT,
+            &[&pre_state, &post_state, &timestamp, &module_hash, &nonce],
+        );
 
         assert_eq!(
             hex::encode(result),
