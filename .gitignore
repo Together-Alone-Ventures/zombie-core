@@ -1,0 +1,4 @@
+/target
+# Cargo.lock is intentionally excluded for library crates.
+# Consumers commit their own Cargo.lock.
+Cargo.lock

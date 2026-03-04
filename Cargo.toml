@@ -1,10 +1,10 @@
 [package]
 name = "zombie-core"
-description = "Shared types, hashing, and receipt structures for Zombie Delete CVDRs"
-version.workspace = true
-edition.workspace = true
-license.workspace = true
-repository.workspace = true
+description = "Shared protocol types for the Zombie suite — cryptographic deletion receipts, hashing primitives, and serialisation for GDPR Right to Erasure on ICP"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+repository = "https://github.com/Together-Alone-Ventures/zombie-core"
 
 [dependencies]
 sha2 = "0.10"
