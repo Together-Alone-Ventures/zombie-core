@@ -1,10 +1,17 @@
 [package]
 name = "zombie-core"
-description = "Shared protocol types for the Zombie suite — cryptographic deletion receipts, hashing primitives, and serialisation for GDPR Right to Erasure on ICP"
-version = "0.1.0"
+description = "Shared protocol types for the Zombie suite - cryptographic deletion receipts, hashing primitives, and serialisation for GDPR Right to Erasure on ICP"
+version = "0.2.0"
 edition = "2021"
 license = "Apache-2.0"
 repository = "https://github.com/Together-Alone-Ventures/zombie-core"
+
+[features]
+# Enable the dfx local replica root key for local testing.
+# NEVER enable this feature in mainnet or CI builds.
+# When disabled, receipts with trust_root_key_id = "local-dev" will
+# fail verification (fail-closed behaviour).
+local-replica = []
 
 [dependencies]
 sha2 = "0.10"

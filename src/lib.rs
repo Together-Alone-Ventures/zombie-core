@@ -8,12 +8,14 @@
 
 pub mod hashing;
 pub mod manifest;
+pub mod nns_keys;
 pub mod receipt;
 pub mod serialisation;
 pub mod tombstone;
 
 pub use hashing::{sha256, sha256_concat, ZERO_HASH};
 pub use manifest::{compute_manifest_hash, FieldDescriptor};
+pub use nns_keys::{active_key, active_key_id, lookup_key, NnsRootKey, MAINNET_KEY, MAINNET_KEYS};
 pub use receipt::{compute_receipt_id, DeletionReceipt, ProtocolVersion, ReceiptSummary};
 pub use serialisation::{decode_pii_state, encode_pii_state, SerialisationError};
 pub use tombstone::{tombstone_constant, TOMBSTONE_CONSTANT};
