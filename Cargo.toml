@@ -1,0 +1,16 @@
+[package]
+name = "zombie-core"
+description = "Shared types, hashing, and receipt structures for Zombie Delete CVDRs"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+sha2 = "0.10"
+ciborium = "0.2"
+serde = { version = "1", features = ["derive"] }
+candid = "0.10"
+
+[dev-dependencies]
+hex = "0.4"
