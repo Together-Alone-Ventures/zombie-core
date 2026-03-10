@@ -11,6 +11,7 @@
 //! | MKTD02_EVENT_V1            | Domain tag     | Tag for deletion_event_hash                   | engine.rs        |
 //! | MKTD02_CERTIFIED_V1        | Domain tag     | Tag for certified_commitment                  | certified.rs     |
 //! | MKTD02_RECEIPT_V1          | Domain tag     | Tag for receipt_id derivation                 | receipt.rs       |
+//! | MKTD02_RECEIPT_V3          | Domain tag     | Tag for v3 receipt_id derivation              | receipt.rs       |
 //! | MKTD02_SALT_V1             | Domain tag     | Tag for per-canister salt derivation          | state.rs         |
 //! | MKTD02_MANIFEST_V1         | Domain tag     | Tag for manifest_hash computation             | manifest.rs      |
 //!
@@ -47,6 +48,9 @@ pub const TAG_CERTIFIED: DomainTag = DomainTag(b"MKTD02_CERTIFIED_V1");
 
 /// Domain tag for receipt_id derivation.
 pub const TAG_RECEIPT: DomainTag = DomainTag(b"MKTD02_RECEIPT_V1");
+
+/// Domain tag for v3 receipt_id derivation with explicit length delimiting.
+pub const TAG_RECEIPT_V3: DomainTag = DomainTag(b"MKTD02_RECEIPT_V3");
 
 /// Domain tag for per-canister salt derivation.
 pub const TAG_SALT: DomainTag = DomainTag(b"MKTD02_SALT_V1");
@@ -142,6 +146,7 @@ mod tests {
             TAG_EVENT,
             TAG_CERTIFIED,
             TAG_RECEIPT,
+            TAG_RECEIPT_V3,
             TAG_SALT,
             TAG_MANIFEST,
         ];
@@ -161,6 +166,7 @@ mod tests {
             TAG_EVENT,
             TAG_CERTIFIED,
             TAG_RECEIPT,
+            TAG_RECEIPT_V3,
             TAG_SALT,
             TAG_MANIFEST,
         ];
@@ -218,6 +224,14 @@ mod tests {
         assert_eq!(
             hex::encode(hash_with_tag(TAG_RECEIPT, &[b"test"])),
             "b5acde122055eed7a27d1af0e0d6cf510b8afa1532c4383193587e3c57001b15"
+        );
+    }
+
+    #[test]
+    fn golden_tag_receipt_v3() {
+        assert_eq!(
+            hex::encode(hash_with_tag(TAG_RECEIPT_V3, &[b"test"])),
+            "80cace4a6dd613ebab643c887df83b0240a801a607512cd5445031a32b30dd86"
         );
     }
 
