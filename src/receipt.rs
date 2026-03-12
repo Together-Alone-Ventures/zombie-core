@@ -235,7 +235,7 @@ impl std::fmt::Display for ProtocolVersion {
 // ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, CandidType)]
-#[serde(from = "DeletionReceiptWire")]
+#[serde(from = "DeletionReceiptWire", into = "DeletionReceiptWire")]
 pub struct DeletionReceipt {
     /// Protocol version string (e.g. "mktd02-v3"). Tells the verifier
     /// which hash formulas to use.
@@ -514,6 +514,47 @@ impl From<DeletionReceiptWire> for DeletionReceipt {
         }
     }
 }
+
+impl From<DeletionReceipt> for DeletionReceiptWire {
+    fn from(r: DeletionReceipt) -> Self {
+        if r.protocol_version.starts_with("mktd02-v3") {
+            DeletionReceiptWire::V3(DeletionReceiptV3Wire {
+                protocol_version: r.protocol_version,
+                receipt_id: r.receipt_id,
+                canister_id: r.canister_id,
+                record_id: r.record_id,
+                pre_state_hash: r.pre_state_hash,
+                post_state_hash: r.post_state_hash,
+                tombstone_hash: r.tombstone_hash,
+                deletion_event_hash: r.deletion_event_hash,
+                certified_commitment: r.certified_commitment,
+                module_hash: r.module_hash,
+                timestamp: r.timestamp,
+                deletion_seq: r.deletion_seq,
+                bls_certificate: r.bls_certificate,
+                trust_root_key_id: r.trust_root_key_id,
+            })
+        } else {
+            DeletionReceiptWire::V2(DeletionReceiptV2Wire {
+                protocol_version: r.protocol_version,
+                receipt_id: r.receipt_id,
+                canister_id: r.canister_id,
+                subnet_id: Principal::anonymous(),
+                pre_state_hash: r.pre_state_hash,
+                post_state_hash: r.post_state_hash,
+                tombstone_hash: r.tombstone_hash,
+                deletion_event_hash: r.deletion_event_hash,
+                certified_commitment: r.certified_commitment,
+                module_hash: r.module_hash,
+                timestamp: r.timestamp,
+                nonce: r.deletion_seq,
+                bls_certificate: r.bls_certificate,
+                trust_root_key_id: r.trust_root_key_id,
+            })
+        }
+    }
+}
+
 
 // ---------------------------------------------------------------------------
 // Tests
