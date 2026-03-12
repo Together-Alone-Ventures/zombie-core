@@ -31,6 +31,161 @@ use crate::hashing::{hash_with_tag, TAG_RECEIPT, TAG_RECEIPT_V3};
 use candid::{CandidType, Principal};
 use serde::{Deserialize, Serialize};
 
+mod serde_hex_bytes {
+    use serde::de::{Error, SeqAccess, Visitor};
+    use serde::{Deserializer, Serialize, Serializer};
+    use std::fmt;
+
+    struct BytesVisitor;
+
+    impl<'de> Visitor<'de> for BytesVisitor {
+        type Value = Vec<u8>;
+
+        fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+            formatter.write_str("a lowercase hex string or byte array")
+        }
+
+        fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+        where
+            E: Error,
+        {
+            decode_hex(value).map_err(Error::custom)
+        }
+
+        fn visit_string<E>(self, value: String) -> Result<Self::Value, E>
+        where
+            E: Error,
+        {
+            decode_hex(&value).map_err(Error::custom)
+        }
+
+        fn visit_bytes<E>(self, value: &[u8]) -> Result<Self::Value, E>
+        where
+            E: Error,
+        {
+            Ok(value.to_vec())
+        }
+
+        fn visit_byte_buf<E>(self, value: Vec<u8>) -> Result<Self::Value, E>
+        where
+            E: Error,
+        {
+            Ok(value)
+        }
+
+        fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+        where
+            A: SeqAccess<'de>,
+        {
+            let mut out = Vec::new();
+            while let Some(b) = seq.next_element::<u8>()? {
+                out.push(b);
+            }
+            Ok(out)
+        }
+    }
+
+    fn decode_hex(input: &str) -> Result<Vec<u8>, String> {
+        let normalized = input
+            .strip_prefix("0x")
+            .or_else(|| input.strip_prefix("0X"))
+            .unwrap_or(input)
+            .to_ascii_lowercase();
+        hex::decode(normalized).map_err(|e| format!("invalid hex: {e}"))
+    }
+
+    pub fn serialize_array_32<S>(value: &[u8; 32], serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        if serializer.is_human_readable() {
+            serializer.serialize_str(&hex::encode(value))
+        } else {
+            value.serialize(serializer)
+        }
+    }
+
+    pub fn deserialize_array_32<'de, D>(deserializer: D) -> Result<[u8; 32], D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let value = deserializer.deserialize_any(BytesVisitor)?;
+        value
+            .try_into()
+            .map_err(|_| D::Error::custom("expected exactly 32 bytes"))
+    }
+
+    pub fn serialize_vec<S>(value: &[u8], serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        if serializer.is_human_readable() {
+            serializer.serialize_str(&hex::encode(value))
+        } else {
+            value.serialize(serializer)
+        }
+    }
+
+    pub fn deserialize_vec<'de, D>(deserializer: D) -> Result<Vec<u8>, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_any(BytesVisitor)
+    }
+
+    pub fn serialize_option_vec<S>(value: &Option<Vec<u8>>, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        if serializer.is_human_readable() {
+            match value {
+                Some(bytes) => serializer.serialize_some(&hex::encode(bytes)),
+                None => serializer.serialize_none(),
+            }
+        } else {
+            value.serialize(serializer)
+        }
+    }
+
+    pub fn deserialize_option_vec<'de, D>(deserializer: D) -> Result<Option<Vec<u8>>, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        struct OptionBytesVisitor;
+
+        impl<'de> Visitor<'de> for OptionBytesVisitor {
+            type Value = Option<Vec<u8>>;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+                formatter.write_str("null, a hex string, or a byte array")
+            }
+
+            fn visit_none<E>(self) -> Result<Self::Value, E>
+            where
+                E: Error,
+            {
+                Ok(None)
+            }
+
+            fn visit_unit<E>(self) -> Result<Self::Value, E>
+            where
+                E: Error,
+            {
+                Ok(None)
+            }
+
+            fn visit_some<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
+            where
+                D: Deserializer<'de>,
+            {
+                deserialize_vec(deserializer).map(Some)
+            }
+        }
+
+        deserializer.deserialize_option(OptionBytesVisitor)
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Protocol Version
 // ---------------------------------------------------------------------------
@@ -85,21 +240,57 @@ pub struct DeletionReceipt {
     /// Protocol version string (e.g. "mktd02-v3"). Tells the verifier
     /// which hash formulas to use.
     pub protocol_version: String,
+    #[serde(
+        serialize_with = "serde_hex_bytes::serialize_array_32",
+        deserialize_with = "serde_hex_bytes::deserialize_array_32"
+    )]
     pub receipt_id: [u8; 32],
     pub canister_id: Principal,
     /// In MKTd02 leaf mode this is the deleted subject principal bytes.
     /// For legacy v2 receipts, this decodes as an empty vector.
+    #[serde(
+        serialize_with = "serde_hex_bytes::serialize_vec",
+        deserialize_with = "serde_hex_bytes::deserialize_vec"
+    )]
     pub record_id: Vec<u8>,
+    #[serde(
+        serialize_with = "serde_hex_bytes::serialize_array_32",
+        deserialize_with = "serde_hex_bytes::deserialize_array_32"
+    )]
     pub pre_state_hash: [u8; 32],
+    #[serde(
+        serialize_with = "serde_hex_bytes::serialize_array_32",
+        deserialize_with = "serde_hex_bytes::deserialize_array_32"
+    )]
     pub post_state_hash: [u8; 32],
+    #[serde(
+        serialize_with = "serde_hex_bytes::serialize_array_32",
+        deserialize_with = "serde_hex_bytes::deserialize_array_32"
+    )]
     pub tombstone_hash: [u8; 32],
+    #[serde(
+        serialize_with = "serde_hex_bytes::serialize_array_32",
+        deserialize_with = "serde_hex_bytes::deserialize_array_32"
+    )]
     pub deletion_event_hash: [u8; 32],
+    #[serde(
+        serialize_with = "serde_hex_bytes::serialize_array_32",
+        deserialize_with = "serde_hex_bytes::deserialize_array_32"
+    )]
     pub certified_commitment: [u8; 32],
+    #[serde(
+        serialize_with = "serde_hex_bytes::serialize_array_32",
+        deserialize_with = "serde_hex_bytes::deserialize_array_32"
+    )]
     pub module_hash: [u8; 32],
     pub timestamp: u64,
     pub deletion_seq: u64,
     /// Raw BLS certificate blob from ic0.data_certificate().
     /// None while receipt is pending finalization; Some after finalization.
+    #[serde(
+        serialize_with = "serde_hex_bytes::serialize_option_vec",
+        deserialize_with = "serde_hex_bytes::deserialize_option_vec"
+    )]
     pub bls_certificate: Option<Vec<u8>>,
     /// Identifies the NNS root key used to sign the BLS certificate.
     /// Look up the actual key bytes via `zombie_core::nns_keys::lookup_key(id)`.
@@ -180,18 +371,54 @@ enum DeletionReceiptWire {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 struct DeletionReceiptV3Wire {
     protocol_version: String,
+    #[serde(
+        serialize_with = "serde_hex_bytes::serialize_array_32",
+        deserialize_with = "serde_hex_bytes::deserialize_array_32"
+    )]
     receipt_id: [u8; 32],
     canister_id: Principal,
+    #[serde(
+        serialize_with = "serde_hex_bytes::serialize_vec",
+        deserialize_with = "serde_hex_bytes::deserialize_vec"
+    )]
     record_id: Vec<u8>,
+    #[serde(
+        serialize_with = "serde_hex_bytes::serialize_array_32",
+        deserialize_with = "serde_hex_bytes::deserialize_array_32"
+    )]
     pre_state_hash: [u8; 32],
+    #[serde(
+        serialize_with = "serde_hex_bytes::serialize_array_32",
+        deserialize_with = "serde_hex_bytes::deserialize_array_32"
+    )]
     post_state_hash: [u8; 32],
+    #[serde(
+        serialize_with = "serde_hex_bytes::serialize_array_32",
+        deserialize_with = "serde_hex_bytes::deserialize_array_32"
+    )]
     tombstone_hash: [u8; 32],
+    #[serde(
+        serialize_with = "serde_hex_bytes::serialize_array_32",
+        deserialize_with = "serde_hex_bytes::deserialize_array_32"
+    )]
     deletion_event_hash: [u8; 32],
+    #[serde(
+        serialize_with = "serde_hex_bytes::serialize_array_32",
+        deserialize_with = "serde_hex_bytes::deserialize_array_32"
+    )]
     certified_commitment: [u8; 32],
+    #[serde(
+        serialize_with = "serde_hex_bytes::serialize_array_32",
+        deserialize_with = "serde_hex_bytes::deserialize_array_32"
+    )]
     module_hash: [u8; 32],
     timestamp: u64,
     deletion_seq: u64,
     #[serde(default)]
+    #[serde(
+        serialize_with = "serde_hex_bytes::serialize_option_vec",
+        deserialize_with = "serde_hex_bytes::deserialize_option_vec"
+    )]
     bls_certificate: Option<Vec<u8>>,
     #[serde(default)]
     trust_root_key_id: String,
@@ -200,18 +427,50 @@ struct DeletionReceiptV3Wire {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 struct DeletionReceiptV2Wire {
     protocol_version: String,
+    #[serde(
+        serialize_with = "serde_hex_bytes::serialize_array_32",
+        deserialize_with = "serde_hex_bytes::deserialize_array_32"
+    )]
     receipt_id: [u8; 32],
     canister_id: Principal,
     subnet_id: Principal,
+    #[serde(
+        serialize_with = "serde_hex_bytes::serialize_array_32",
+        deserialize_with = "serde_hex_bytes::deserialize_array_32"
+    )]
     pre_state_hash: [u8; 32],
+    #[serde(
+        serialize_with = "serde_hex_bytes::serialize_array_32",
+        deserialize_with = "serde_hex_bytes::deserialize_array_32"
+    )]
     post_state_hash: [u8; 32],
+    #[serde(
+        serialize_with = "serde_hex_bytes::serialize_array_32",
+        deserialize_with = "serde_hex_bytes::deserialize_array_32"
+    )]
     tombstone_hash: [u8; 32],
+    #[serde(
+        serialize_with = "serde_hex_bytes::serialize_array_32",
+        deserialize_with = "serde_hex_bytes::deserialize_array_32"
+    )]
     deletion_event_hash: [u8; 32],
+    #[serde(
+        serialize_with = "serde_hex_bytes::serialize_array_32",
+        deserialize_with = "serde_hex_bytes::deserialize_array_32"
+    )]
     certified_commitment: [u8; 32],
+    #[serde(
+        serialize_with = "serde_hex_bytes::serialize_array_32",
+        deserialize_with = "serde_hex_bytes::deserialize_array_32"
+    )]
     module_hash: [u8; 32],
     timestamp: u64,
     nonce: u64,
     #[serde(default)]
+    #[serde(
+        serialize_with = "serde_hex_bytes::serialize_option_vec",
+        deserialize_with = "serde_hex_bytes::deserialize_option_vec"
+    )]
     bls_certificate: Option<Vec<u8>>,
     #[serde(default)]
     trust_root_key_id: String,
@@ -263,6 +522,7 @@ impl From<DeletionReceiptWire> for DeletionReceipt {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serde_json::json;
 
     fn test_receipt() -> DeletionReceipt {
         DeletionReceipt {
@@ -455,5 +715,73 @@ mod tests {
         let summary = ReceiptSummary::from(&decoded);
         assert_eq!(summary.protocol_version, "mktd02-v2");
         assert_eq!(summary.deletion_seq, 77);
+    }
+
+    #[test]
+    fn v3_json_serializes_portable_bytes_as_hex_strings() {
+        let mut receipt = test_receipt();
+        receipt.bls_certificate = Some(vec![0x0a, 0x0b, 0x0c]);
+
+        let value = serde_json::to_value(&receipt).unwrap();
+
+        assert_eq!(value["receipt_id"], json!(hex::encode(receipt.receipt_id)));
+        assert_eq!(value["record_id"], json!(hex::encode(&receipt.record_id)));
+        assert_eq!(
+            value["pre_state_hash"],
+            json!(hex::encode(receipt.pre_state_hash))
+        );
+        assert_eq!(
+            value["post_state_hash"],
+            json!(hex::encode(receipt.post_state_hash))
+        );
+        assert_eq!(
+            value["tombstone_hash"],
+            json!(hex::encode(receipt.tombstone_hash))
+        );
+        assert_eq!(
+            value["deletion_event_hash"],
+            json!(hex::encode(receipt.deletion_event_hash))
+        );
+        assert_eq!(
+            value["certified_commitment"],
+            json!(hex::encode(receipt.certified_commitment))
+        );
+        assert_eq!(value["module_hash"], json!(hex::encode(receipt.module_hash)));
+        assert_eq!(
+            value["bls_certificate"],
+            json!(hex::encode(receipt.bls_certificate.unwrap()))
+        );
+    }
+
+    #[test]
+    fn v3_json_deserializes_hex_strings_for_portable_bytes() {
+        let receipt = test_receipt();
+        let json_value = json!({
+            "protocol_version": receipt.protocol_version,
+            "receipt_id": hex::encode(receipt.receipt_id),
+            "canister_id": receipt.canister_id,
+            "record_id": hex::encode(&receipt.record_id),
+            "pre_state_hash": hex::encode(receipt.pre_state_hash),
+            "post_state_hash": hex::encode(receipt.post_state_hash),
+            "tombstone_hash": hex::encode(receipt.tombstone_hash),
+            "deletion_event_hash": hex::encode(receipt.deletion_event_hash),
+            "certified_commitment": hex::encode(receipt.certified_commitment),
+            "module_hash": hex::encode(receipt.module_hash),
+            "timestamp": receipt.timestamp,
+            "deletion_seq": receipt.deletion_seq,
+            "bls_certificate": "0a0b0c",
+            "trust_root_key_id": receipt.trust_root_key_id,
+        });
+
+        let decoded: DeletionReceipt = serde_json::from_value(json_value).unwrap();
+        assert_eq!(decoded.receipt_id, [1u8; 32]);
+        assert_eq!(decoded.record_id, vec![7u8, 8u8, 9u8]);
+        assert_eq!(decoded.pre_state_hash, [2u8; 32]);
+        assert_eq!(decoded.post_state_hash, [3u8; 32]);
+        assert_eq!(decoded.tombstone_hash, [4u8; 32]);
+        assert_eq!(decoded.deletion_event_hash, [5u8; 32]);
+        assert_eq!(decoded.certified_commitment, [6u8; 32]);
+        assert_eq!(decoded.module_hash, [8u8; 32]);
+        assert_eq!(decoded.bls_certificate, Some(vec![0x0a, 0x0b, 0x0c]));
     }
 }
